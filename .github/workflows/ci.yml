@@ -1,16 +1,7 @@
-# ============================================================
-# CI Pipeline — SeedSwap (CS 650, Module 7-2)
-# ============================================================
 # Runs on every pull request that targets main. The job name
 # below ("ci") is the name selected as a required status check
 # in the branch protection rule for main, which is what turns
 # a failing run into a blocked merge.
-#
-# Three packages, three sets of npm commands:
-#   backend/   Express API + node:test unit tests
-#   frontend/  React + Vite build (tsc -b && vite build)
-#   e2e/       Playwright end-to-end suite
-# ============================================================
 
 name: CI
 
@@ -33,7 +24,7 @@ jobs:
         with:
           node-version: '24'
 
-      # --- Stage 1: backend unit tests ---------------------
+      # Stage 1: backend unit tests
       # Fastest check runs first. Covers service-layer logic
       # and validation in backend/tests/service.test.ts.
       - name: Install backend dependencies
@@ -44,7 +35,7 @@ jobs:
         run: npm test
         working-directory: backend
 
-      # --- Stage 2: frontend build -------------------------
+      # Stage 2: frontend build
       # tsc -b must pass before vite build runs, so type
       # errors and bad imports fail here.
       - name: Install frontend dependencies
@@ -55,7 +46,7 @@ jobs:
         run: npm run build
         working-directory: frontend
 
-      # --- Stage 3: end-to-end tests -----------------------
+      # Stage 3: end-to-end tests 
       # Boots both servers and drives a real browser through
       # the claim flow, API integration, and concurrency.
       - name: Install e2e dependencies
@@ -70,7 +61,7 @@ jobs:
         run: npx playwright test
         working-directory: e2e
 
-      # --- Artifacts ---------------------------------------
+      # Artifacts
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
