@@ -1,0 +1,86 @@
+# ============================================================
+# CI Pipeline — SeedSwap (CS 650, Module 7-2)
+# ============================================================
+# Runs on every pull request that targets main. The job name
+# below ("ci") is the name selected as a required status check
+# in the branch protection rule for main, which is what turns
+# a failing run into a blocked merge.
+#
+# Three packages, three sets of npm commands:
+#   backend/   Express API + node:test unit tests
+#   frontend/  React + Vite build (tsc -b && vite build)
+#   e2e/       Playwright end-to-end suite
+# ============================================================
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # --- Setup -------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # --- Stage 1: backend unit tests ---------------------
+      # Fastest check runs first. Covers service-layer logic
+      # and validation in backend/tests/service.test.ts.
+      - name: Install backend dependencies
+        run: npm install
+        working-directory: backend
+
+      - name: Run backend tests
+        run: npm test
+        working-directory: backend
+
+      # --- Stage 2: frontend build -------------------------
+      # tsc -b must pass before vite build runs, so type
+      # errors and bad imports fail here.
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      # --- Stage 3: end-to-end tests -----------------------
+      # Boots both servers and drives a real browser through
+      # the claim flow, API integration, and concurrency.
+      - name: Install e2e dependencies
+        run: npm install
+        working-directory: e2e
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Run e2e tests
+        run: npx playwright test
+        working-directory: e2e
+
+      # --- Artifacts ---------------------------------------
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: frontend/dist
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
